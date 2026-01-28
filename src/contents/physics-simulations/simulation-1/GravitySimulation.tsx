@@ -1,19 +1,20 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  Box,
-  Button,
-  Typography,
-  Stack,
-  Paper,
-  FormControlLabel,
-  Checkbox,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
+    Box,
+    Button,
+    Typography,
+    Stack,
+    Paper,
+    FormControlLabel,
+    Checkbox,
+    Accordion,
+    AccordionSummary,
+    AccordionDetails,
 } from '@mui/material';
 import { PlayArrow, Pause as PauseIcon, Refresh as RefreshIcon, ExpandMore } from '@mui/icons-material';
 import ControlSlider from './components/ControlSlider';
-import { Vector2D } from '../physics-simulations';
+import { Vector, Vector2D } from '../physics-simulations';
+import { Gravity } from '../physics-simulations';
 
 // ==================== TYPES ====================
 
@@ -154,51 +155,51 @@ const GravitySimulation: React.FC = () => {
 
     // 5. Force Arrows (scaled by distance and mass)
     if (showForceArrows) {
-      const contactX = phys.moonX;
-      const contactY = phys.moonY;
-
-      // F_E (Earth on Moon) — toward Earth
-      const dirToEarth = {
+      // --- Force directions (Newton's 3rd Law) ---
+      // Directions are purely render-time, derived from current positions
+      const forceDirEarthOnMoon = Vector.normalize({
         x: EARTH_X - phys.moonX,
         y: EARTH_Y - phys.moonY,
+      });
+      const forceDirMoonOnEarth = Vector.invert(forceDirEarthOnMoon);
+
+      // --- Perceptual force for visualization ---
+      // Keeps inverse-square physics but amplifies mass perception for students
+      const perceptualForce =
+        Math.sqrt(earthMassVal * moonMassVal) *
+        (GRAVITATIONAL_CONSTANT / (phys.moonDistance ** 2));
+      const arrowLength = Gravity.forceToArrowLength(perceptualForce);
+
+      // Offset arrow starts to avoid overlapping with planet bodies
+      const moonArrowStart = {
+        x: phys.moonX + forceDirEarthOnMoon.x * (moonRadius + 5),
+        y: phys.moonY + forceDirEarthOnMoon.y * (moonRadius + 5),
       };
-      const dirMag = Math.sqrt(dirToEarth.x ** 2 + dirToEarth.y ** 2);
-      const dirNorm = {
-        x: dirToEarth.x / dirMag,
-        y: dirToEarth.y / dirMag,
+      const earthArrowStart = {
+        x: EARTH_X + forceDirMoonOnEarth.x * (earthRadius + 5),
+        y: EARTH_Y + forceDirMoonOnEarth.y * (earthRadius + 5),
       };
 
-      // Calculate arrow length based on force magnitude and distance
-      // Force should be more visible when closer and with larger masses, less visible when farther
-      const arrowLength = Math.max(30, Math.min(phys.forceMagnitude * ARROW_SCALE, 150));
 
+
+      // F_E: Force exerted by Earth on Moon
       drawArrow(
         ctx,
-        contactX,
-        contactY,
-        dirNorm,
+        moonArrowStart.x,
+        moonArrowStart.y,
+        forceDirEarthOnMoon,
         arrowLength,
         '#FF6B6B',
         'F_E',
         'right'
       );
 
-      // F_M (Moon on Earth) — toward Moon
-      const dirToMoon = {
-        x: phys.moonX - EARTH_X,
-        y: phys.moonY - EARTH_Y,
-      };
-      const dirMag2 = Math.sqrt(dirToMoon.x ** 2 + dirToMoon.y ** 2);
-      const dirNorm2 = {
-        x: dirToMoon.x / dirMag2,
-        y: dirToMoon.y / dirMag2,
-      };
-
+      // F_M: Force exerted by Moon on Earth (equal magnitude, opposite direction)
       drawArrow(
         ctx,
-        EARTH_X,
-        EARTH_Y,
-        dirNorm2,
+        earthArrowStart.x,
+        earthArrowStart.y,
+        forceDirMoonOnEarth,
         arrowLength,
         '#4ECDC4',
         'F_M',
