@@ -358,7 +358,7 @@ const NewtonsThirdLawSimulation: React.FC = () => {
     <Box sx={{ width: '100%', height: '100vh', display: 'flex', bgcolor: '#F8F9FA' }}>
       
       {/* --- Left Control Panel --- */}
-      <Box sx={{ flex: '0 0 320px', p: 4, display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <Box sx={{ flex: '0 0 320px', p: 4, display: 'flex', flexDirection: 'column', gap: 4, overflowY: 'auto', maxHeight: '100vh' }}>
         
         {/* Hammer Mass */}
         <Paper elevation={0} sx={{ p: 3, border: '2px solid #C4B5FD', borderRadius: '16px' }}>
@@ -389,7 +389,7 @@ const NewtonsThirdLawSimulation: React.FC = () => {
         </Paper>
 
         {/* Buttons */}
-        <Stack direction="row" spacing={2} mt="auto">
+        <Stack direction="row" spacing={2} sx={{ marginTop: '24px' }}>
           <Button 
             variant="contained" 
             fullWidth 

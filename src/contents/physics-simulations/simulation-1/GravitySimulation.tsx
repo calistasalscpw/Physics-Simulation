@@ -107,6 +107,9 @@ const GravitySimulation: React.FC = () => {
     const earthRadius = EARTH_BASE_RADIUS * Math.pow(earthMassVal, 1 / 3);
     const moonRadius = MOON_BASE_RADIUS * Math.pow(moonMassVal, 1 / 3);
 
+    // Update force magnitude based on current masses and distance
+    phys.forceMagnitude = calculateGravitationalForce(earthMassVal, moonMassVal, phys.moonDistance);
+
     // 1. Clear & Background (Space)
     ctx.fillStyle = '#0B0E27';
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
@@ -166,8 +169,8 @@ const GravitySimulation: React.FC = () => {
       };
 
       // Calculate arrow length based on force magnitude and distance
-      // Force should be more visible when closer, less visible when farther
-      const arrowLength = Math.max(20, Math.min(phys.forceMagnitude * ARROW_SCALE, 120));
+      // Force should be more visible when closer and with larger masses, less visible when farther
+      const arrowLength = Math.max(30, Math.min(phys.forceMagnitude * ARROW_SCALE, 150));
 
       drawArrow(
         ctx,
