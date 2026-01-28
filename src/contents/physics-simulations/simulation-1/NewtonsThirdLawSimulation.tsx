@@ -336,20 +336,26 @@ const NewtonsThirdLawSimulation: React.FC = () => {
   const handleHit = () => {
     physicsRef.current.state = 'swinging';
     setSimState('swinging');
-    };
+  };
 
+  const handleUp = () => {
+    physicsRef.current.state = 'resetting';
+    setSimState('resetting');
+  };
 
   const handleReset = () => {
-  const phys = physicsRef.current;
-
+    const phys = physicsRef.current;
     phys.state = 'idle';
     phys.hammerAngle = INITIAL_HAMMER_ANGLE;
     phys.nailDepth = 0;
     phys.maxDepth = 0;
     phys.forceMagnitude = 0;
-
     setSimState('idle');
-    };
+  };
+
+  // Get current pressure and speed for display
+  const currentPressure = MASS_MAP[massOption];
+  const currentSpeed = SPEED_MAP[speedOption];
 
 
   // ==================== UI RENDER ====================
@@ -388,36 +394,79 @@ const NewtonsThirdLawSimulation: React.FC = () => {
           </RadioGroup>
         </Paper>
 
+        {/* Pressure & Speed Display */}
+        <Paper elevation={0} sx={{ p: 3, border: '2px solid #C4B5FD', borderRadius: '16px', bgcolor: '#F5F3FF' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+            <Box>
+              <Typography variant="caption" sx={{ color: '#666' }}>Pressure</Typography>
+              <Typography variant="h6" fontWeight="bold" sx={{ color: '#8B5CF6' }}>
+                {currentPressure.toFixed(1)}x
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="caption" sx={{ color: '#666' }}>Speed</Typography>
+              <Typography variant="h6" fontWeight="bold" sx={{ color: '#8B5CF6' }}>
+                {currentSpeed.toFixed(1)}x
+              </Typography>
+            </Box>
+          </Box>
+        </Paper>
+
         {/* Buttons */}
-        <Stack direction="row" spacing={2} sx={{ marginTop: '24px' }}>
-          <Button 
-            variant="contained" 
-            fullWidth 
-            onClick={handleHit}
-            disabled={simState === 'swinging'}
-            sx={{ 
-              bgcolor: '#C4B5FD', 
-              color: 'white', 
-              py: 1.5,
-              fontSize: '1.2rem',
-              borderRadius: '12px',
-              '&:hover': { bgcolor: '#8B5CF6' },
-              '&:disabled': { bgcolor: '#E5E7EB' }
-            }}
-          >
-            {simState === 'idle' || simState === 'pause' ? 'HIT' : 'UP'}
-          </Button>
+        <Stack direction="column" spacing={2}>
+          <Stack direction="row" spacing={2}>
+            <Button 
+              variant="contained" 
+              fullWidth 
+              onClick={handleHit}
+              disabled={simState === 'swinging' || simState === 'contact'}
+              sx={{ 
+                bgcolor: '#C4B5FD', 
+                color: 'white', 
+                py: 1.5,
+                fontSize: '1rem',
+                fontWeight: 'bold',
+                borderRadius: '12px',
+                '&:hover': { bgcolor: '#8B5CF6' },
+                '&:disabled': { bgcolor: '#E5E7EB' }
+              }}
+            >
+              HIT
+            </Button>
+            <Button 
+              variant="contained" 
+              fullWidth 
+              onClick={handleUp}
+              disabled={simState === 'idle' || simState === 'swinging'}
+              sx={{ 
+                bgcolor: '#C4B5FD', 
+                color: 'white', 
+                py: 1.5,
+                fontSize: '1rem',
+                fontWeight: 'bold',
+                borderRadius: '12px',
+                '&:hover': { bgcolor: '#8B5CF6' },
+                '&:disabled': { bgcolor: '#E5E7EB' }
+              }}
+            >
+              UP
+            </Button>
+          </Stack>
           <Button 
             variant="outlined" 
             onClick={handleReset}
+            fullWidth
             sx={{ 
-              minWidth: '60px', 
               borderRadius: '12px',
               borderColor: '#000',
-              color: '#000'
+              color: '#000',
+              py: 1.5,
+              fontSize: '1rem',
+              fontWeight: 'bold'
             }}
           >
-            <Refresh />
+            <Refresh sx={{ mr: 1 }} />
+            RESET
           </Button>
         </Stack>
       </Box>
