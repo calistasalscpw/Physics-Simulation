@@ -7,8 +7,11 @@ import {
   Paper,
   FormControlLabel,
   Checkbox,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from '@mui/material';
-import { PlayArrow, Pause as PauseIcon, Refresh as RefreshIcon } from '@mui/icons-material';
+import { PlayArrow, Pause as PauseIcon, Refresh as RefreshIcon, ExpandMore } from '@mui/icons-material';
 import ControlSlider from './components/ControlSlider';
 import { Vector2D } from '../physics-simulations';
 
@@ -29,21 +32,22 @@ interface AnimationState {
 
 // ==================== CONFIGURATION ====================
 
-const CANVAS_WIDTH = 800;
-const CANVAS_HEIGHT = 600;
+const CANVAS_WIDTH = 1000;
+const CANVAS_HEIGHT = 700;
 
-const EARTH_X = 400;
-const EARTH_Y = 300;
-const EARTH_RADIUS = 40;
+const EARTH_X = 500;
+const EARTH_Y = 350;
+const EARTH_BASE_RADIUS = 40;
 
-const MOON_RADIUS = 15;
+const MOON_BASE_RADIUS = 15;
 const MIN_DISTANCE = 150;
-const MAX_DISTANCE = 400;
-const INITIAL_DISTANCE = 280;
+const MAX_DISTANCE = 450;
+const INITIAL_DISTANCE = 300;
 
 // Physics Constants
 const MASS_MAP = { '0.5': 0.5, 'earth': 1, '1.5': 1.5, '2': 2 };
 const GRAVITATIONAL_CONSTANT = 15000; // Adjusted for visualization
+const ARROW_SCALE = 0.3; // Scale factor for force arrows based on force magnitude
 
 // ==================== COMPONENT ====================
 
@@ -54,6 +58,7 @@ const GravitySimulation: React.FC = () => {
   const [simState, setSimState] = useState<GravitySimState>('idle');
   const [showForceArrows, setShowForceArrows] = useState(true);
   const [showOrbitalPath, setShowOrbitalPath] = useState(true);
+  const [expandedAccordion, setExpandedAccordion] = useState<string | false>(false);
 
   // --- Animation Refs ---
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -94,6 +99,14 @@ const GravitySimulation: React.FC = () => {
 
     const phys = physicsRef.current;
 
+    // Get current mass values for sizing
+    const earthMassVal = MASS_MAP[earthMass];
+    const moonMassVal = MASS_MAP[moonMass];
+
+    // Calculate dynamic planet/moon sizes based on mass (cube root for visual perception)
+    const earthRadius = EARTH_BASE_RADIUS * Math.pow(earthMassVal, 1 / 3);
+    const moonRadius = MOON_BASE_RADIUS * Math.pow(moonMassVal, 1 / 3);
+
     // 1. Clear & Background (Space)
     ctx.fillStyle = '#0B0E27';
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
@@ -121,7 +134,7 @@ const GravitySimulation: React.FC = () => {
     // 3. Earth
     ctx.fillStyle = '#4A90E2';
     ctx.beginPath();
-    ctx.arc(EARTH_X, EARTH_Y, EARTH_RADIUS, 0, Math.PI * 2);
+    ctx.arc(EARTH_X, EARTH_Y, earthRadius, 0, Math.PI * 2);
     ctx.fill();
     ctx.strokeStyle = '#2E5C8A';
     ctx.lineWidth = 2;
@@ -130,13 +143,13 @@ const GravitySimulation: React.FC = () => {
     // 4. Moon
     ctx.fillStyle = '#D3D3D3';
     ctx.beginPath();
-    ctx.arc(phys.moonX, phys.moonY, MOON_RADIUS, 0, Math.PI * 2);
+    ctx.arc(phys.moonX, phys.moonY, moonRadius, 0, Math.PI * 2);
     ctx.fill();
     ctx.strokeStyle = '#A9A9A9';
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // 5. Force Arrows
+    // 5. Force Arrows (scaled by distance and mass)
     if (showForceArrows) {
       const contactX = phys.moonX;
       const contactY = phys.moonY;
@@ -152,12 +165,16 @@ const GravitySimulation: React.FC = () => {
         y: dirToEarth.y / dirMag,
       };
 
+      // Calculate arrow length based on force magnitude and distance
+      // Force should be more visible when closer, less visible when farther
+      const arrowLength = Math.max(20, Math.min(phys.forceMagnitude * ARROW_SCALE, 120));
+
       drawArrow(
         ctx,
         contactX,
         contactY,
         dirNorm,
-        phys.forceMagnitude,
+        arrowLength,
         '#FF6B6B',
         'F_E',
         'right'
@@ -179,7 +196,7 @@ const GravitySimulation: React.FC = () => {
         EARTH_X,
         EARTH_Y,
         dirNorm2,
-        phys.forceMagnitude,
+        arrowLength,
         '#4ECDC4',
         'F_M',
         'left'
@@ -194,7 +211,12 @@ const GravitySimulation: React.FC = () => {
       20,
       40
     );
-  }, [showForceArrows, showOrbitalPath]);
+
+    // 7. Drag instruction
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.font = '14px Arial';
+    ctx.fillText('💡 Drag the moon to adjust distance', 20, 65);
+  }, [showForceArrows, showOrbitalPath, earthMass, moonMass]);
 
   const drawArrow = (
     ctx: CanvasRenderingContext2D,
@@ -298,9 +320,11 @@ const GravitySimulation: React.FC = () => {
     const y = (e.clientY - rect.top) * (CANVAS_HEIGHT / rect.height);
 
     const phys = physicsRef.current;
+    const moonMassVal = MASS_MAP[moonMass];
+    const moonRadius = MOON_BASE_RADIUS * Math.pow(moonMassVal, 1 / 3);
     const distToMoon = Math.sqrt((x - phys.moonX) ** 2 + (y - phys.moonY) ** 2);
 
-    if (distToMoon < MOON_RADIUS + 10) {
+    if (distToMoon < moonRadius + 15) {
       isDraggingRef.current = true;
     }
   };
@@ -361,7 +385,7 @@ const GravitySimulation: React.FC = () => {
   // ==================== UI RENDER ====================
 
   return (
-    <Box sx={{ width: '100%', height: '100vh', display: 'flex', bgcolor: '#F8F9FA' }}>
+    <Box sx={{ width: '100%', minHeight: '100vh', display: 'flex', bgcolor: '#F8F9FA', overflow: 'auto' }}>
       {/* --- Left Control Panel --- */}
       <Box
         sx={{
@@ -369,13 +393,14 @@ const GravitySimulation: React.FC = () => {
           p: 4,
           display: 'flex',
           flexDirection: 'column',
-          gap: 4,
+          gap: 3,
           overflowY: 'auto',
+          borderRight: '1px solid #E5E7EB',
         }}
       >
         {/* Earth Mass */}
         <ControlSlider
-          label="Earth Mass"
+          label="Planet Mass"
           value={parseFloat(earthMass === 'earth' ? '1' : earthMass)}
           onChange={(val: number) => {
             const key = val === 1 ? 'earth' : val === 0.5 ? '0.5' : val === 1.5 ? '1.5' : '2';
@@ -405,7 +430,7 @@ const GravitySimulation: React.FC = () => {
           step={0.5}
           marks={[
             { value: 0.5, label: '0.5x' },
-            { value: 1, label: 'Earth' },
+            { value: 1, label: 'Our Moon' },
             { value: 1.5, label: '1.5x' },
             { value: 2, label: '2x' },
           ]}
@@ -439,7 +464,7 @@ const GravitySimulation: React.FC = () => {
         </Paper>
 
         {/* Buttons */}
-        <Stack direction="row" spacing={2} mt="auto">
+        <Stack direction="row" spacing={2}>
           <Button
             variant="contained"
             fullWidth
@@ -449,7 +474,7 @@ const GravitySimulation: React.FC = () => {
               bgcolor: '#C4B5FD',
               color: 'white',
               py: 1.5,
-              fontSize: '1rem',
+              fontSize: '0.95rem',
               borderRadius: '12px',
               '&:hover': { bgcolor: '#8B5CF6' },
               '&:disabled': { bgcolor: '#E5E7EB' },
@@ -490,7 +515,7 @@ const GravitySimulation: React.FC = () => {
       </Box>
 
       {/* --- Main Simulation Area --- */}
-      <Box sx={{ flex: 1, position: 'relative', bgcolor: '#FFFFFF', overflow: 'hidden' }}>
+      <Box sx={{ flex: 1, position: 'relative', bgcolor: '#FFFFFF', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <canvas
           ref={canvasRef}
           width={CANVAS_WIDTH}
@@ -500,50 +525,66 @@ const GravitySimulation: React.FC = () => {
           onMouseUp={handleCanvasMouseUp}
           onMouseLeave={handleCanvasMouseUp}
           style={{
-            width: '100%',
-            height: '100%',
+            maxWidth: '100%',
+            maxHeight: '100%',
             objectFit: 'contain',
             cursor: 'grab',
+            display: 'block',
           }}
         />
 
-        {/* --- Legend Overlay --- */}
-        <Paper
-          elevation={3}
+        {/* --- Legend Overlay (Collapsible) --- */}
+        <Box
           sx={{
             position: 'absolute',
             top: 40,
             right: 40,
-            width: 450,
-            p: 3,
-            borderRadius: '8px',
-            border: '1px solid #E5E7EB',
-            bgcolor: 'rgba(255, 255, 255, 0.95)',
             zIndex: 10,
+            maxWidth: '500px',
+            maxHeight: '80vh',
+            overflow: 'auto',
           }}
         >
-          {/* Variable Definitions */}
-          <Box sx={{ border: '1px solid #E0E0E0', p: 2, mb: 2, borderRadius: '4px' }}>
-            <Typography>
-              <strong>F<sub>E</sub></strong> : Gravitational force exerted by the Earth on the Moon
-            </Typography>
-            <Typography>
-              <strong>F<sub>M</sub></strong> : Gravitational force exerted by the Moon on the Earth
-            </Typography>
-          </Box>
+          <Accordion
+            expanded={expandedAccordion === 'forces'}
+            onChange={(event, isExpanded) => {
+              setExpandedAccordion(isExpanded ? 'forces' : false);
+            }}
+            sx={{
+              bgcolor: 'rgba(255, 255, 255, 0.98)',
+              border: '1px solid #E5E7EB',
+              borderRadius: '8px',
+              boxShadow: 3,
+            }}
+          >
+            <AccordionSummary expandIcon={<ExpandMore />}>
+              <Typography fontWeight="bold">Newton's Third Law (Force Symmetry)</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              {/* Variable Definitions */}
+              <Box sx={{ border: '1px solid #E0E0E0', p: 2, mb: 2, borderRadius: '4px', bgcolor: '#F9F9F9' }}>
+                <Typography variant="body2" gutterBottom>
+                  <strong>F<sub>E</sub></strong> : Gravitational force exerted by the Earth on the Moon
+                </Typography>
+                <Typography variant="body2">
+                  <strong>F<sub>M</sub></strong> : Gravitational force exerted by the Moon on the Earth
+                </Typography>
+              </Box>
 
-          {/* Checklist */}
-          <Box sx={{ border: '1px solid #E0E0E0', p: 2, borderRadius: '4px' }}>
-            <Typography variant="body1" fontWeight="bold" gutterBottom>
-              The forces F<sub>E</sub> and F<sub>M</sub> are:
-            </Typography>
-            <ul style={{ margin: 0, paddingLeft: '20px', lineHeight: '1.8' }}>
-              <li>equal in magnitude</li>
-              <li>acting in opposite directions</li>
-              <li>not acting on the same object</li>
-            </ul>
-          </Box>
-        </Paper>
+              {/* Checklist */}
+              <Box sx={{ border: '1px solid #E0E0E0', p: 2, borderRadius: '4px', bgcolor: '#F9F9F9' }}>
+                <Typography variant="body2" fontWeight="bold" gutterBottom>
+                  The forces F<sub>E</sub> and F<sub>M</sub> are:
+                </Typography>
+                <ul style={{ margin: 0, paddingLeft: '20px', lineHeight: '1.8', fontSize: '0.9rem' }}>
+                  <li>equal in magnitude</li>
+                  <li>acting in opposite directions</li>
+                  <li>not acting on the same object</li>
+                </ul>
+              </Box>
+            </AccordionDetails>
+          </Accordion>
+        </Box>
       </Box>
     </Box>
   );
